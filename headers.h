@@ -1,3 +1,4 @@
+// Standard libraries
 #include <stdio.h>      //if you don't use scanf/printf change this include
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -10,6 +11,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
+
+// Custom files
+#include "data_structures.h"
+#include "constants.h"
 
 typedef short bool;
 #define true 1
@@ -64,4 +69,20 @@ void destroyClk(bool terminateAll)
     {
         killpg(getpgrp(), SIGINT);
     }
+}
+
+/*
+ * This gets the down queue ID that sends the process information
+ * from the process generator to the scheduler
+ * If it is already created just get the ID without new creation
+*/
+
+int getProcessDownQueue() {
+    key_t key_id;
+    int msgq_id;
+
+    key_id = ftok(PROCESS_Q_FILE_NAME, PROCESS_Q_UNIQUE_NUM);
+    msgq_id = msgget(key_id, 0666 | IPC_CREAT);
+
+    return msgq_id;
 }
