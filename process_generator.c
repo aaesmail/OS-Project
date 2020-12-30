@@ -1,16 +1,15 @@
 #include "headers.h"
 
 void clearResources(int);
-ProcessStaticInfo* readInputFile();
-int getSchedulingAlgorithm(int* quantum);
+ProcessStaticInfo *readInputFile();
+int getSchedulingAlgorithm(int *quantum);
 void createClockAndScheduler(int schedulingAlgorithm, int quantum);
 
 // global variables to clean in INT handler
 int processDownQueueId;
-ProcessStaticInfo* processes;
+ProcessStaticInfo *processes;
 
-
-int main(int argc, char * argv[])
+int main(int argc, char *argv[])
 {
     signal(SIGINT, clearResources);
     // TODO Initialization
@@ -40,11 +39,13 @@ int main(int argc, char * argv[])
     // 6. Create a data structure for processes and provide it with its parameters.
     // 7. Send the information to the scheduler at the appropriate time.
 
-    while(processToSend < processesNumber) {
+    while (processToSend < processesNumber)
+    {
 
         time = getClk();
 
-        while (processes[processToSend].arrivalTime <= time) {
+        while (processes[processToSend].arrivalTime <= time)
+        {
             // send process
 
             // create message
@@ -52,7 +53,7 @@ int main(int argc, char * argv[])
             processes[processToSend].mType = 3;
 
             // send message
-            msgsnd(processDownQueueId, &processes[processToSend], sizeOfMessage, !IPC_NOWAIT);            
+            msgsnd(processDownQueueId, &processes[processToSend], sizeOfMessage, !IPC_NOWAIT);
 
             ++processToSend;
         }
@@ -75,24 +76,28 @@ void clearResources(int signum)
     exit(0);
 }
 
-ProcessStaticInfo* readInputFile(int* numberOfProcesses) {
+ProcessStaticInfo *readInputFile(int *numberOfProcesses)
+{
     // Keep asking user for input file name till enter a valid file name
     char fileName[50];
-    do {
+    do
+    {
         printf("\nEnter name of input file: ");
         scanf("%s", fileName);
 
-    } while(access(fileName, F_OK) != 0);
+    } while (access(fileName, F_OK) != 0);
 
     // First get number of processes in file
-    FILE* inputFile = fopen(fileName, "r");
+    FILE *inputFile = fopen(fileName, "r");
 
     char buff[255];
 
     *numberOfProcesses = 0;
 
-    while (fgets(buff, sizeof(buff), inputFile) != NULL) {
-        if (buff[0] >= '0' && buff[0] <= '9') {
+    while (fgets(buff, sizeof(buff), inputFile) != NULL)
+    {
+        if (buff[0] >= '0' && buff[0] <= '9')
+        {
             // this means it is a process line
             ++(*numberOfProcesses);
         }
@@ -104,22 +109,25 @@ ProcessStaticInfo* readInputFile(int* numberOfProcesses) {
     ++(*numberOfProcesses);
 
     // create array to hold all processes static info
-    ProcessStaticInfo* processes = malloc(*numberOfProcesses * sizeof(ProcessStaticInfo));
-    
+    ProcessStaticInfo *processes = malloc(*numberOfProcesses * sizeof(ProcessStaticInfo));
+
     // read file again to get data of all processes
     inputFile = fopen(fileName, "r");
 
     int processNumber = 0;
 
-    while (fgets(buff, sizeof(buff), inputFile) != NULL) {
-        if (buff[0] >= '0' && buff[0] <= '9') {
+    while (fgets(buff, sizeof(buff), inputFile) != NULL)
+    {
+        if (buff[0] >= '0' && buff[0] <= '9')
+        {
             // now at a line of process
             // track where at in row
             int locationInRow = 0;
 
             // first get id of process
             int processId = 0;
-            while (buff[locationInRow] != '\t') {
+            while (buff[locationInRow] != '\t')
+            {
 
                 processId *= 10;
                 processId += buff[locationInRow] - '0';
@@ -133,7 +141,8 @@ ProcessStaticInfo* readInputFile(int* numberOfProcesses) {
 
             // next get the process arrival time
             int arrivalTime = 0;
-            while (buff[locationInRow] != '\t') {
+            while (buff[locationInRow] != '\t')
+            {
 
                 arrivalTime *= 10;
                 arrivalTime += buff[locationInRow] - '0';
@@ -146,7 +155,8 @@ ProcessStaticInfo* readInputFile(int* numberOfProcesses) {
 
             // next get the run time
             int runTime = 0;
-            while (buff[locationInRow] != '\t') {
+            while (buff[locationInRow] != '\t')
+            {
 
                 runTime *= 10;
                 runTime += buff[locationInRow] - '0';
@@ -159,7 +169,8 @@ ProcessStaticInfo* readInputFile(int* numberOfProcesses) {
 
             // finally get the priority
             int priority = 0;
-            while ((buff[locationInRow] >= '0') && (buff[locationInRow] <= '9')) {
+            while ((buff[locationInRow] >= '0') && (buff[locationInRow] <= '9'))
+            {
 
                 priority *= 10;
                 priority += buff[locationInRow] - '0';
@@ -183,10 +194,12 @@ ProcessStaticInfo* readInputFile(int* numberOfProcesses) {
     return processes;
 }
 
-int getSchedulingAlgorithm(int* quantum) {
+int getSchedulingAlgorithm(int *quantum)
+{
     // keep asking user for algorithm number till enter a valid input
     int schedulingAlgorithm;
-    do {
+    do
+    {
         printf("\nChoose Scheduling Algorithm: 1-2-3\n");
         printf("1-> Non-preemtive Highest Priority First (HPF)\n");
         printf("2-> Shortest Remaining Time Next (SRTN)\n");
@@ -195,32 +208,37 @@ int getSchedulingAlgorithm(int* quantum) {
 
         scanf("%d", &schedulingAlgorithm);
 
-    } while((schedulingAlgorithm < 1) || (schedulingAlgorithm > 3));
+    } while ((schedulingAlgorithm < 1) || (schedulingAlgorithm > 3));
 
     // if entry is round robin then get it's quantum
-    if (schedulingAlgorithm == 3) {
+    if (schedulingAlgorithm == 3)
+    {
         // keep asking user for quantum till enter a quantum bigger than 0
-        do {
+        do
+        {
             printf("\nEnter Quantum: ");
             scanf("%d", quantum);
 
-        } while((*quantum) < 1);
+        } while ((*quantum) < 1);
     }
 
     return schedulingAlgorithm;
 }
 
-void createClockAndScheduler(int schedulingAlgorithm, int quantum) {
+void createClockAndScheduler(int schedulingAlgorithm, int quantum)
+{
     // first create clock
     pid_t pid = fork();
-    if (pid == 0) {
+    if (pid == 0)
+    {
         char *argv[] = {"./clk.out", NULL};
         execv("./clk.out", argv);
     }
 
     // then create scheduler
     pid = fork();
-    if (pid == 0) {
+    if (pid == 0)
+    {
         // turn scheduling algorithm to string
         char schedulingAlgoStr[4];
         sprintf(schedulingAlgoStr, "%d", schedulingAlgorithm);
@@ -231,5 +249,5 @@ void createClockAndScheduler(int schedulingAlgorithm, int quantum) {
 
         char *argv[] = {"./scheduler.out", schedulingAlgoStr, quantumStr, NULL};
         execv("./scheduler.out", argv);
-    }  
+    }
 }

@@ -1,5 +1,5 @@
 // Standard libraries
-#include <stdio.h>      //if you don't use scanf/printf change this include
+#include <stdio.h> //if you don't use scanf/printf change this include
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/file.h>
@@ -18,23 +18,19 @@
 
 typedef short bool;
 #define true 1
-#define false 1
+#define false 0
 
 #define SHKEY 300
 
-
 ///==============================
 //don't mess with this variable//
-int * shmaddr;                 //
+int *shmaddr; //
 //===============================
-
-
 
 int getClk()
 {
     return *shmaddr;
 }
-
 
 /*
  * All process call this function at the beginning to establish communication between them and the clock module.
@@ -50,9 +46,8 @@ void initClk()
         sleep(1);
         shmid = shmget(SHKEY, 4, 0444);
     }
-    shmaddr = (int *) shmat(shmid, (void *)0, 0);
+    shmaddr = (int *)shmat(shmid, (void *)0, 0);
 }
-
 
 /*
  * All process call this function at the end to release the communication
@@ -77,7 +72,8 @@ void destroyClk(bool terminateAll)
  * If it is already created just get the ID without new creation
 */
 
-int getProcessDownQueue() {
+int getProcessDownQueue()
+{
     key_t key_id;
     int msgq_id;
 
