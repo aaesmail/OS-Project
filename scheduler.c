@@ -39,24 +39,40 @@ int main(int argc, char *argv[])
         q.front = q.rear = NULL;
         node *n;
         bool readingDone = false;
+        //
+        printf("Scheduler Start\n");
 
         while (true)
+
         {
+
             // checking if there is a new process from the process generetor
+
             if (!readingDone && msgrcv(processesQId, process, sizeOfMessage, 0, IPC_NOWAIT) != -1)
 
                 if (process->id == -1)
+
                 {
+
+                    printf("END READING PROCESSES!\n");
+
                     free(process);
+
                     readingDone = true;
                 }
+
                 else
+
                 {
+
                     // if there, add it to the queue
 
                     int pid = createProcess(process);
+
                     n = malloc(sizeof(node));
+
                     n->id = pid;
+
                     circularQueue_enqueue(&q, n);
                 }
 
@@ -65,9 +81,16 @@ int main(int argc, char *argv[])
             n = circularQueue_dequeue(&q);
 
             if (!n && readingDone)
+
+            {
+
+                printf("Scheduler END\n");
+
                 break;
+            }
 
             if (!n)
+
                 continue;
 
             int startTime = getClk();
@@ -82,15 +105,21 @@ int main(int argc, char *argv[])
             printf("pid: %d,    start: %d,     end: %d\n\n", n->id, startTime, getClk());
 
             if (processDone)
+
             {
+
                 printf("PID: %d DONE\n", n->id);
 
                 processDone = false;
+
                 free(n);
             }
+
             else
+
                 circularQueue_enqueue(&q, n);
         }
+        //
     }
 
     //upon termination release the clock resources.
