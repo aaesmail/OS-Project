@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
     // printf("current time is %d\n", x);
 
     // 5 create message queue to use in communication with scheduler
-    processDownQueueId = getProcessDownQueue();
+    processDownQueueId = getProcessDownQueue(1);
     unsigned long sizeOfMessage = sizeof(ProcessStaticInfo) - sizeof(long);
     int processToSend = 0;
     int time;

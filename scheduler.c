@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
 
     // get the id of message queue that has processes
 
-    int processesQId = getProcessDownQueue();
+    int processesQId = getProcessDownQueue(2);
     unsigned long sizeOfMessage = sizeof(ProcessStaticInfo);
     ProcessStaticInfo *process = malloc(sizeof(ProcessStaticInfo));
 
@@ -79,11 +79,11 @@ int main(int argc, char *argv[])
 
             kill(n->id, SIGSTOP);
 
-            // printf("pid: %d,    start: %d,     end: %d\n\n", n->id, startTime, getClk());
+            printf("pid: %d,    start: %d,     end: %d\n\n", n->id, startTime, getClk());
 
             if (processDone)
             {
-                // printf("PID: %d DONE\n", n->id);
+                printf("PID: %d DONE\n", n->id);
 
                 processDone = false;
                 free(n);

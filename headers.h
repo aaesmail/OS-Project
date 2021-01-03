@@ -72,13 +72,23 @@ void destroyClk(bool terminateAll)
  * If it is already created just get the ID without new creation
 */
 
-int getProcessDownQueue()
+int getProcessDownQueue(int callingProcess)
+
 {
+
     key_t key_id;
+
     int msgq_id;
 
     key_id = ftok(PROCESS_Q_FILE_NAME, PROCESS_Q_UNIQUE_NUM);
+
     msgq_id = msgget(key_id, 0666 | IPC_CREAT);
+
+    char p1[] = "PROCESS_GENERATOR";
+
+    char p2[] = "SCHEDULER";
+
+    printf("%s::MsgQ Created with id: %d\n", callingProcess == 1 ? p1 : p2, msgq_id);
 
     return msgq_id;
 }
