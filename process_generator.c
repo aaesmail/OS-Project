@@ -51,6 +51,7 @@ int main(int argc, char *argv[])
             // create message
             // 3 is arbitary value as long as it's not 0
             processes[processToSend].mType = 3;
+            // printf("fpassing process %d\n", processToSend);
 
             // send message
             msgsnd(processDownQueueId, &processes[processToSend], sizeOfMessage, !IPC_NOWAIT);
@@ -58,17 +59,18 @@ int main(int argc, char *argv[])
             ++processToSend;
         }
     }
-
+    printf("PROCESS_GENERATOR:: finished passing processes\n");
     // sleep waiting for a signal to terminate
-    sigset_t emptySet;
-    sigemptyset(&emptySet);
-    sigsuspend(&emptySet);
-
+    // sigset_t emptySet;
+    // sigemptyset(&emptySet);
+    // sigsuspend(&emptySet);
+    while(1);
     return 0;
 }
 
 void clearResources(int signum)
 {
+    printf("PROCESS_GENERATOR:: clear resources\n");
     //TODO Clears all resources in case of interruption
     msgctl(processDownQueueId, IPC_RMID, (struct msqid_ds *)0);
     free(processes);
@@ -231,7 +233,8 @@ void createClockAndScheduler(int schedulingAlgorithm, int quantum)
     pid_t pid = fork();
     if (pid == 0)
     {
-        char *argv[] = {"./clk.out", NULL};
+        printf("PROCESS_GENERATOR:: forking clk\n");
+        char *argv[] = {"clk.out", NULL};
         execv("./clk.out", argv);
     }
 
@@ -239,6 +242,7 @@ void createClockAndScheduler(int schedulingAlgorithm, int quantum)
     pid = fork();
     if (pid == 0)
     {
+        printf("PROCESS_GENERATOR:: forking scheduler\n");
         // turn scheduling algorithm to string
         char schedulingAlgoStr[4];
         sprintf(schedulingAlgoStr, "%d", schedulingAlgorithm);
@@ -247,7 +251,7 @@ void createClockAndScheduler(int schedulingAlgorithm, int quantum)
         char quantumStr[4];
         sprintf(quantumStr, "%d", quantum);
 
-        char *argv[] = {"./scheduler.out", schedulingAlgoStr, quantumStr, NULL};
+        char *argv[] = {"scheduler.out", schedulingAlgoStr, quantumStr, NULL};
         execv("./scheduler.out", argv);
     }
 }

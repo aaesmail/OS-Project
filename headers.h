@@ -1,5 +1,5 @@
 // Standard libraries
-#include <stdio.h> //if you don't use scanf/printf change this include
+// #include <stdio.h> //if you don't use scanf/printf change this include (INCLUDED IN data_strucures.h)
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/file.h>
@@ -84,11 +84,9 @@ int getProcessDownQueue(int callingProcess)
 
     msgq_id = msgget(key_id, 0666 | IPC_CREAT);
 
-    char p1[] = "PROCESS_GENERATOR";
-
-    char p2[] = "SCHEDULER";
-
-    printf("%s::MsgQ Created with id: %d\n", callingProcess == 1 ? p1 : p2, msgq_id);
+    char p1[] = "PG";
+    if(callingProcess == 1)
+        printf("%s::MsgQ Created with id: %d\n", p1 , msgq_id);
 
     return msgq_id;
 }

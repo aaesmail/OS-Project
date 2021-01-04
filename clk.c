@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
 
     {
 
-        perror("Error in creating shm!");
+        perror("Error in creating shm!\n");
 
         exit(-1);
     }
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
 
     {
 
-        perror("Error in attaching the shm in clock!");
+        perror("Error in attaching the shm in clock!\n");
 
         exit(-1);
     }
@@ -57,11 +57,9 @@ int main(int argc, char *argv[])
     *shmaddr = clk; /* initialize shared memory */
 
     while (1)
-
     {
 
-        printf("--Clk tick: %d----\n", *shmaddr);
-
+        printf("\nCLK:: ---- tick: %d ----\n", *shmaddr);
         sleep(1);
 
         (*shmaddr)++;
