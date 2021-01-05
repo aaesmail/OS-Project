@@ -31,7 +31,7 @@ enum process_log_state
 
 typedef struct Pcb
 {
-    int id; //From text file
+    int id;  //From text file
     int pid; //process id
     int runTime;
     int remainingTime;
@@ -45,13 +45,13 @@ typedef struct Pcb
 
 typedef struct Log
 {
-    int time;                 //time --> document (current clk tick)
-    int processId;            //process --> document  (ID from text file)
+    int time;                     //time --> document (current clk tick)
+    int processId;                //process --> document  (ID from text file)
     enum process_log_state state; // state --> document
-    int arrivalTime;          //arr --> document
-    int runTime;              //total --> document
-    int remainingTime;        //remain --> document
-    int waitingTime;          //wait --> document
+    int arrivalTime;              //arr --> document
+    int runTime;                  //total --> document
+    int remainingTime;            //remain --> document
+    int waitingTime;              //wait --> document
     struct Log *next;
 } Log;
 
@@ -128,7 +128,7 @@ Pcb *createPcb(int id, int pid, int arrivalTime, int runTime, int remainingTime,
 {
 
     Pcb *newPcb = (Pcb *)malloc(sizeof(Pcb));
-    newPcb->id = id; //From text file
+    newPcb->id = id;   //From text file
     newPcb->pid = pid; // process id
     newPcb->arrivalTime = arrivalTime;
     newPcb->runTime = runTime;
@@ -179,7 +179,7 @@ Pcb peek(Pcb **head)
 
 // Removes the element with the
 // highest priority form the list
-Pcb* dequeue(Pcb **head, Pcb* returnValue)
+Pcb *dequeue(Pcb **head, Pcb *returnValue)
 {
     if (!(*head))
         return NULL;
@@ -246,7 +246,7 @@ struct Logger
     struct Log *rear;
 };
 
-void loggerInit(struct Logger* logger)
+void loggerInit(struct Logger *logger)
 {
     logger->front = NULL;
     logger->rear = NULL;
@@ -266,14 +266,12 @@ void logger_enqueue(struct Logger *logger, struct Log *log)
         log->next = NULL;
         logger->rear = log;
     }
-
 }
 
-
-double getStdWTA(struct Logger* logger, double avgWTA)
+double getStdWTA(struct Logger *logger, double avgWTA)
 {
     double stdWTA = 0;
-    struct Log* currentLog = logger->front;
+    struct Log *currentLog = logger->front;
     int n = 0;
     while (currentLog)
     {
@@ -283,33 +281,36 @@ double getStdWTA(struct Logger* logger, double avgWTA)
         {
             i_ta = currentLog->waitingTime + currentLog->runTime;
             f_wta = (double)i_ta / currentLog->runTime;
-            stdWTA += (avgWTA - f_wta)*(avgWTA - f_wta);
+            stdWTA += (avgWTA - f_wta) * (avgWTA - f_wta);
             n++;
         }
         currentLog = currentLog->next;
     }
-    if(n == 0) return 0;
-    return sqrt(stdWTA/n);
+    if (n == 0)
+        return 0;
+    return sqrt(stdWTA / n);
 }
 
-void removeTrailingZeros(char* str)
+void removeTrailingZeros(char *str)
 {
-    char* c = str;
+    char *c = str;
     short foundADot = 0;
-    while(*c != '\0')
+    while (*c != '\0')
     {
-        if(*c == '.') foundADot = 1;
+        if (*c == '.')
+            foundADot = 1;
         c++;
     }
-    if(!foundADot)return;
+    if (!foundADot)
+        return;
     c--;
-    while(*c == '0')
+    while (*c == '0')
     {
         *c = '\0';
         c--;
     }
-    if(*c == '.') *c = '\0';
-
+    if (*c == '.')
+        *c = '\0';
 }
 
 void printLogger(struct Logger *logger, int cpu_utilization)
@@ -326,59 +327,63 @@ void printLogger(struct Logger *logger, int cpu_utilization)
     int i_ta;
     double f_wta;
 
-    double avgWaiting= 0;
-    double avgWTA= 0;
+    double avgWaiting = 0;
+    double avgWTA = 0;
     double stdWTA = 0;
-
 
     printf("\nScheduler.log\n\n");
     printf("#At time x process y state arr w total z remain y wait k\n");
-    struct Log* currentLog = logger->front;
+    struct Log *currentLog = logger->front;
     while (currentLog)
     {
         switch (currentLog->state)
         {
-            case STARTED:
-                state = s1;
-                TA_and_WTA[0] = '\0';
-                break;
-            case RESUMED:
-                state = s2;
-                TA_and_WTA[0] = '\0';
-                break;
-            case STOPPED:
-                state = s3;
-                TA_and_WTA[0] = '\0';
-                break;
-            case FINISHED:
-                state = s4;
-                i_ta = currentLog->waitingTime + currentLog->runTime;
-                f_wta = (double)i_ta / currentLog->runTime;
-                sprintf(TA_and_WTA, " TA %d WTA = %f", i_ta, roundf(f_wta * 100) / 100);
-                removeTrailingZeros(TA_and_WTA);
-                avgWTA += f_wta;
-                avgWaiting += currentLog->waitingTime;
-                numProcesses += 1;
-                break;
-            default:
-                printf("UNDEFINED BEHAVIOUR\n");
-                exit(-1);
-                break;
+        case STARTED:
+            state = s1;
+            TA_and_WTA[0] = '\0';
+            break;
+        case RESUMED:
+            state = s2;
+            TA_and_WTA[0] = '\0';
+            break;
+        case STOPPED:
+            state = s3;
+            TA_and_WTA[0] = '\0';
+            break;
+        case FINISHED:
+            state = s4;
+            i_ta = currentLog->waitingTime + currentLog->runTime;
+            f_wta = (double)i_ta / currentLog->runTime;
+            sprintf(TA_and_WTA, " TA %d WTA = %f", i_ta, roundf(f_wta * 100) / 100);
+            removeTrailingZeros(TA_and_WTA);
+            avgWTA += f_wta;
+            avgWaiting += currentLog->waitingTime;
+            numProcesses += 1;
+            break;
+        default:
+            printf("UNDEFINED BEHAVIOUR\n");
+            exit(-1);
+            break;
         }
 
         //print log
-        printf("At time %d process %d %s arr %d total %d remain %d wait %d%s\n", \
-        currentLog->time, currentLog->processId, state, currentLog->arrivalTime, currentLog->runTime, currentLog->remainingTime, currentLog->waitingTime, TA_and_WTA);
+        printf("At time %d process %d %s arr %d total %d remain %d wait %d%s\n",
+               currentLog->time, currentLog->processId, state, currentLog->arrivalTime, currentLog->runTime, currentLog->remainingTime, currentLog->waitingTime, TA_and_WTA);
 
         currentLog = currentLog->next;
     }
-    avgWaiting /= numProcesses;
-    avgWTA /= numProcesses;
-    
     stdWTA = getStdWTA(logger, avgWTA);
+    if (numProcesses != 0)
+    {
+        avgWaiting /= numProcesses;
+        avgWTA /= numProcesses;
+    }
+    else{
+        cpu_utilization = 100;
+    }
     printf("\n-------------------------------\n");
     printf("\nScheduler.perf\n\n");
-    printf("CPU utilization = %d%%\n",cpu_utilization);
+    printf("CPU utilization = %d%%\n", cpu_utilization);
     sprintf(out, "%.2f", avgWTA);
     removeTrailingZeros(out);
     printf("Avg WTA = %s\n", out);
@@ -388,17 +393,14 @@ void printLogger(struct Logger *logger, int cpu_utilization)
     printf("Std WTA = %s\n", out);
 }
 
-
-
-
 void emptyLogger(struct Logger *logger)
 {
 
     while (logger->front)
     {
-        Log* temp = logger->front;
+        Log *temp = logger->front;
         logger->front = logger->front->next;
         free(temp);
     }
-    logger->rear= NULL;
+    logger->rear = NULL;
 }
