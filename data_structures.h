@@ -372,7 +372,6 @@ void printLogger(struct Logger *logger, int cpu_utilization)
 
         currentLog = currentLog->next;
     }
-    stdWTA = getStdWTA(logger, avgWTA);
     if (numProcesses != 0)
     {
         avgWaiting /= numProcesses;
@@ -381,6 +380,7 @@ void printLogger(struct Logger *logger, int cpu_utilization)
     else{
         cpu_utilization = 100;
     }
+    stdWTA = getStdWTA(logger, avgWTA);
     printf("\n-------------------------------\n");
     printf("\nScheduler.perf\n\n");
     printf("CPU utilization = %d%%\n", cpu_utilization);
