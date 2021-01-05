@@ -37,6 +37,7 @@ typedef struct Pcb
     int remainingTime;
     int waitingTime;
     int arrivalTime;
+    int stoppedTime;
     int priority; //Lower value ---> higher priority
     enum process_state state;
     struct Pcb *next;
@@ -123,7 +124,7 @@ Pcb *circularQueue_dequeue(circularQueue *q)
 
 //PRIORITY QUEUE FOR PROCESSES TABLE
 //-----------------------------------
-Pcb *createPcb(int id, int pid, int arrivalTime, int runTime, int remainingTime, int waitingTime, int priority, enum process_state state)
+Pcb *createPcb(int id, int pid, int arrivalTime, int runTime, int remainingTime, int waitingTime, int priority, int stoppedTime, enum process_state state)
 {
 
     Pcb *newPcb = (Pcb *)malloc(sizeof(Pcb));
@@ -134,6 +135,7 @@ Pcb *createPcb(int id, int pid, int arrivalTime, int runTime, int remainingTime,
     newPcb->remainingTime = remainingTime;
     newPcb->waitingTime = waitingTime;
     newPcb->priority = priority;
+    newPcb->stoppedTime = stoppedTime;
     newPcb->state = state;
     newPcb->next = NULL;
 
@@ -320,11 +322,11 @@ void printLogger(struct Logger *logger, int cpu_utilization)
     char *state;
     char TA_and_WTA[100];
     char out[50];
-
+    int numProcesses = 0;
     int i_ta;
     double f_wta;
 
-    int avgWaiting= 0;
+    double avgWaiting= 0;
     double avgWTA= 0;
     double stdWTA = 0;
 
@@ -356,6 +358,7 @@ void printLogger(struct Logger *logger, int cpu_utilization)
                 removeTrailingZeros(TA_and_WTA);
                 avgWTA += f_wta;
                 avgWaiting += currentLog->waitingTime;
+                numProcesses += 1;
                 break;
             default:
                 printf("UNDEFINED BEHAVIOUR\n");
@@ -369,15 +372,17 @@ void printLogger(struct Logger *logger, int cpu_utilization)
 
         currentLog = currentLog->next;
     }
-    stdWTA = getStdWTA(logger, avgWTA);
+    avgWaiting /= numProcesses;
+    avgWTA /= numProcesses;
     
+    stdWTA = getStdWTA(logger, avgWTA);
     printf("\n-------------------------------\n");
     printf("\nScheduler.perf\n\n");
     printf("CPU utilization = %d%%\n",cpu_utilization);
     sprintf(out, "%.2f", avgWTA);
     removeTrailingZeros(out);
     printf("Avg WTA = %s\n", out);
-    printf("Avg Waiting = %d\n", avgWaiting);
+    printf("Avg Waiting = %.2f\n", avgWaiting);
     sprintf(out, "%.2f", stdWTA);
     removeTrailingZeros(out);
     printf("Std WTA = %s\n", out);

@@ -132,10 +132,9 @@ void hpf_scheduler(struct Logger *logs, int *cpu_utilization)
             else
             {
                 int pid = createProcess(process);
-                // Insert new Pcb: id=pid, arrivalTime=given arr time, runTime=given run time, remainingTime= given run time, priority=given priority, state=WAITING
-                Pcb *newPcb = createPcb(process->id, pid, process->arrivalTime, process->runTime, process->runTime, 0, process->priority, WAITING);
+                // Insert new Pcb: id=pid, arrivalTime=given arr time, runTime=given run time, remainingTime= given run time, priority=given priority, stoppedTime=0(not used in HPF), state=WAITING
+                Pcb *newPcb = createPcb(process->id, pid, process->arrivalTime, process->runTime, process->runTime, 0, process->priority, 0, WAITING);
                 enqueue(&priorityQHead, newPcb);
-
             }
         }
 
@@ -148,7 +147,8 @@ void hpf_scheduler(struct Logger *logs, int *cpu_utilization)
         quantumStartTime = getClk();
         int x = kill(currentRunningProcess.pid, SIGCONT);
 
-        if(quantumFinishTime != 0) schedulerWastedTime += quantumStartTime - quantumFinishTime;
+        if (quantumFinishTime != 0)
+            schedulerWastedTime += quantumStartTime - quantumFinishTime;
         currentRunningProcess.state = RUNNING;
         currentRunningProcess.waitingTime += quantumStartTime - currentRunningProcess.arrivalTime; //@ HPF always = quantumStartTime - currentRunningProcess.arrivalTime [The += is the same as =]
 
@@ -168,7 +168,7 @@ void hpf_scheduler(struct Logger *logs, int *cpu_utilization)
         // while( (getClk() - startTime) > currentRunningProcess.runTime )
         while (!processDone)
             ;
-        
+
         quantumFinishTime = getClk();
         currentRunningProcess.remainingTime -= quantumFinishTime - quantumStartTime; //@ HPF always = 0
         newLog = createLog(
@@ -271,13 +271,198 @@ void rr_scheduler(struct Logger *logs, int *cpu_utilization, int quantum)
 
 void srtn_scheduler(struct Logger *logs, int *cpu_utilization)
 {
-    // get the id of message queue that has processes
     int processesQId = getProcessDownQueue(2);
     unsigned long sizeOfMessage = sizeof(ProcessStaticInfo);
     ProcessStaticInfo *process = malloc(sizeof(ProcessStaticInfo)); //To receive messages in.
 
+    // Create empty priority queue
+    Pcb *priorityQHead = NULL;
+    Log *newLog;
+
+    bool readingDone = false;
+
+    int schedulerStartTime = getClk();
+    int schedulerFinishTime;
+    int schedulerTotalTime;
+
+    int quantumStartTime = 0;
+    int quantumFinishTime = 0;
+    int schedulerWastedTime = 0;
+
+    int currentlyRunning = -1;
+
+    int stoppedTime=0;
+
+    Pcb currentRunningProcess;
+
     while (true)
     {
-        //Code Here
+        // checking if there are any new messages from the process generetor.
+        while (!readingDone && msgrcv(processesQId, process, sizeOfMessage, 0, IPC_NOWAIT) != -1)
+        {
+            // When the process generator sends a -1 msg indicating that it finished sending all the processes.
+            if (process->id == -1)
+            {
+                free(process);
+                readingDone = true;
+            }
+            // When the process generator sends a msg other than -1 indicating that a new process has arrived to the system.
+
+            else
+            {
+                //printf("New Process with runtime: %d \n\n", process->runTime);
+                //printf("pid: %d, runtime: %d, Current time: %d\n\n", process->id, process->runTime, getClk());
+                if (currentlyRunning != -1)
+                {
+                    kill(currentlyRunning, SIGSTOP);
+                    quantumFinishTime = getClk();
+                    currentRunningProcess.remainingTime -= getClk() - quantumStartTime;
+                    if (currentRunningProcess.remainingTime <= process->runTime)
+                    {
+                        //Insert new process into queue
+                        //printf("Process with id: %d is continuing as its remaining time is: %d\n\n", currentlyRunning, currentRunningProcess.remainingTime);
+                        int pid = createProcess(process);
+                        // Insert new Pcb: id=pid, arrivalTime=given arr time, runTime=given run time, remainingTime= given run time, priority=given priority(Run Time for SRTN), state=WAITING
+                        Pcb *n = createPcb(process->id, pid, process->arrivalTime, process->runTime, process->runTime, 0, process->runTime, -1, WAITING);
+                        enqueue(&priorityQHead, n);
+                        quantumStartTime = getClk();
+                        kill(currentlyRunning, SIGCONT);
+                    }
+                    else
+                    {
+                        // Insert currently running process into queue
+                        Pcb *n = createPcb(currentRunningProcess.id, currentRunningProcess.pid, currentRunningProcess.arrivalTime, currentRunningProcess.runTime, currentRunningProcess.remainingTime, currentRunningProcess.waitingTime, currentRunningProcess.priority, quantumFinishTime, WAITING);
+                        enqueue(&priorityQHead, n);
+                        newLog = createLog(
+                            quantumFinishTime,
+                            currentRunningProcess.id,
+                            STOPPED,
+                            currentRunningProcess.arrivalTime,
+                            currentRunningProcess.runTime,
+                            currentRunningProcess.remainingTime,
+                            currentRunningProcess.waitingTime);
+                        logger_enqueue(logs, newLog);
+
+                        printf("SCHEDULER:: stopped process %d\n", currentRunningProcess.pid);
+
+                        int pid = createProcess(process);
+                        //printf("Stopping process with id: %d to start process: %d\n\n", currentlyRunning, pid);
+
+                        quantumStartTime = getClk();
+                        kill(pid, SIGCONT);
+                        currentlyRunning = pid;
+                        currentRunningProcess.id = process->id;
+                        currentRunningProcess.pid = pid;
+                        currentRunningProcess.arrivalTime = quantumStartTime;
+                        currentRunningProcess.runTime = process->runTime;
+                        currentRunningProcess.remainingTime = process->runTime;
+                        if (quantumFinishTime != 0)
+                            schedulerWastedTime += quantumStartTime - quantumFinishTime;
+                        currentRunningProcess.state = RUNNING;
+                        currentRunningProcess.waitingTime = quantumStartTime - currentRunningProcess.arrivalTime;
+
+                        newLog = createLog(
+                            quantumStartTime,
+                            currentRunningProcess.id,
+                            STARTED,
+                            currentRunningProcess.arrivalTime,
+                            currentRunningProcess.runTime,
+                            currentRunningProcess.remainingTime,
+                            currentRunningProcess.waitingTime);
+
+                        logger_enqueue(logs, newLog);
+
+                        printf("SCHEDULER:: started process %d\n", currentRunningProcess.pid);
+                    }
+                }
+                else
+                {
+                    int pid = createProcess(process);
+                    kill(pid, SIGCONT);
+                    quantumStartTime = getClk();
+                    currentlyRunning = pid;
+                    currentRunningProcess.id = process->id;
+                    currentRunningProcess.pid = pid;
+                    currentRunningProcess.arrivalTime = quantumStartTime;
+                    currentRunningProcess.runTime = process->runTime;
+                    currentRunningProcess.remainingTime = process->runTime;
+                    currentRunningProcess.priority = process->runTime;
+                    currentRunningProcess.stoppedTime = -1;
+                    if (quantumFinishTime != 0)
+                        schedulerWastedTime += quantumStartTime - quantumFinishTime;
+                    currentRunningProcess.state = RUNNING;
+                    currentRunningProcess.waitingTime = quantumStartTime - currentRunningProcess.arrivalTime;
+
+                    newLog = createLog(
+                        quantumStartTime,
+                        currentRunningProcess.id,
+                        STARTED,
+                        currentRunningProcess.arrivalTime,
+                        currentRunningProcess.runTime,
+                        currentRunningProcess.remainingTime,
+                        currentRunningProcess.waitingTime);
+
+                    logger_enqueue(logs, newLog);
+
+                    printf("SCHEDULER:: started process %d\n", currentRunningProcess.pid);
+                }
+            }
+        }
+        if (processDone)
+            {
+                //printf("PID: %d DONE\n", currentlyRunning);
+                currentlyRunning = -1;
+                processDone = false;
+                quantumFinishTime = getClk();
+                currentRunningProcess.remainingTime -= quantumFinishTime - quantumStartTime;
+                newLog = createLog(
+                    quantumFinishTime,
+                    currentRunningProcess.id,
+                    FINISHED,
+                    currentRunningProcess.arrivalTime,
+                    currentRunningProcess.runTime,
+                    currentRunningProcess.remainingTime,
+                    currentRunningProcess.waitingTime);
+                logger_enqueue(logs, newLog);
+
+                printf("SCHEDULER:: finished process %d\n", currentRunningProcess.pid);
+
+                if (!dequeue(&priorityQHead, &currentRunningProcess))
+                {
+                    if (readingDone)
+                        break;
+                    else
+                        continue;
+                }
+                kill(currentRunningProcess.pid, SIGCONT);
+                currentlyRunning = currentRunningProcess.pid;
+
+                quantumStartTime = getClk();
+                if (quantumFinishTime != 0)
+                    schedulerWastedTime += quantumStartTime - quantumFinishTime;
+                currentRunningProcess.state = RUNNING;
+                if(currentRunningProcess.stoppedTime == -1)
+                    currentRunningProcess.waitingTime += quantumStartTime - currentRunningProcess.arrivalTime;
+                else
+                    currentRunningProcess.waitingTime += quantumStartTime - currentRunningProcess.stoppedTime;
+
+                newLog = createLog(
+                    quantumStartTime,
+                    currentRunningProcess.id,
+                    STARTED,
+                    currentRunningProcess.arrivalTime,
+                    currentRunningProcess.runTime,
+                    currentRunningProcess.remainingTime,
+                    currentRunningProcess.waitingTime);
+
+                logger_enqueue(logs, newLog);
+
+                printf("SCHEDULER:: started process %d\n", currentRunningProcess.pid);
+            }
     }
+
+    schedulerFinishTime = getClk();
+    schedulerTotalTime = schedulerFinishTime - schedulerStartTime;
+    printf("%d  %d\n", schedulerTotalTime, schedulerWastedTime);
+    (*cpu_utilization) = ((double)(schedulerTotalTime - schedulerWastedTime) / schedulerTotalTime) * 100;
 }
