@@ -331,9 +331,11 @@ void printLogger(struct Logger *logger, int cpu_utilization)
     double avgWTA = 0;
     double stdWTA = 0;
 
-    printf("\nScheduler.log\n\n");
-    printf("#At time x process y state arr w total z remain y wait k\n");
+    FILE *log_file = fopen("scheduler.log", "w");
+
+    fprintf(log_file, "#At time x process y state arr w total z remain y wait k\n");
     struct Log *currentLog = logger->front;
+
     while (currentLog)
     {
         switch (currentLog->state)
@@ -367,30 +369,45 @@ void printLogger(struct Logger *logger, int cpu_utilization)
         }
 
         //print log
-        printf("At time %d process %d %s arr %d total %d remain %d wait %d%s\n",
-               currentLog->time, currentLog->processId, state, currentLog->arrivalTime, currentLog->runTime, currentLog->remainingTime, currentLog->waitingTime, TA_and_WTA);
+        fprintf(log_file, "At time %d process %d %s arr %d total %d remain %d wait %d%s\n",
+                currentLog->time, currentLog->processId, state, currentLog->arrivalTime, currentLog->runTime, currentLog->remainingTime, currentLog->waitingTime, TA_and_WTA);
 
         currentLog = currentLog->next;
     }
+
+    fclose(log_file);
+    printf("scheduler.log saved.\n");
+
     if (numProcesses != 0)
     {
         avgWaiting /= numProcesses;
         avgWTA /= numProcesses;
     }
-    else{
+    else
+    {
         cpu_utilization = 100;
     }
+
+    FILE *perf_file = fopen("scheduler.perf", "w");
+
     stdWTA = getStdWTA(logger, avgWTA);
-    printf("\n-------------------------------\n");
-    printf("\nScheduler.perf\n\n");
-    printf("CPU utilization = %d%%\n", cpu_utilization);
+
+    fprintf(perf_file, "CPU utilization = %d%%\n", cpu_utilization);
+
     sprintf(out, "%.2f", avgWTA);
     removeTrailingZeros(out);
-    printf("Avg WTA = %s\n", out);
-    printf("Avg Waiting = %.2f\n", avgWaiting);
+
+    fprintf(perf_file, "Avg WTA = %s\n", out);
+
+    fprintf(perf_file, "Avg Waiting = %.2f\n", avgWaiting);
+
     sprintf(out, "%.2f", stdWTA);
     removeTrailingZeros(out);
-    printf("Std WTA = %s\n", out);
+
+    fprintf(perf_file, "Std WTA = %s\n", out);
+
+    fclose(perf_file);
+    printf("scheduler.perf saved.\n");
 }
 
 void emptyLogger(struct Logger *logger)
