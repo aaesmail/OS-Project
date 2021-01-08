@@ -14,6 +14,7 @@ int main(int argc, char *argv[])
     signal(SIGUSR1, processDoneHandler);
 
     initClk();
+    initMemory();
 
     //TODO implement the scheduler :)
 
@@ -50,6 +51,7 @@ int main(int argc, char *argv[])
 
     //upon termination release the clock resources.
     destroyClk(false);
+    destroyMemory();
 
     // notify process generator that it terminated to clear resources
     kill(getppid(), SIGINT);
