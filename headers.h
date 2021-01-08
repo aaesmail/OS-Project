@@ -15,6 +15,7 @@
 // Custom files
 #include "data_structures.h"
 #include "constants.h"
+#include "memory.h"
 
 typedef short bool;
 #define true 1
