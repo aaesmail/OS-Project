@@ -12,6 +12,7 @@ typedef struct
     int arrivalTime;
     int runTime;
     int priority;
+    int memSize;
 
 } ProcessStaticInfo;
 

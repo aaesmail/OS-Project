@@ -169,9 +169,9 @@ ProcessStaticInfo *readInputFile(int *numberOfProcesses)
 
             processes[processNumber].runTime = runTime;
 
-            // finally get the priority
+            // next get the priority
             int priority = 0;
-            while ((buff[locationInRow] >= '0') && (buff[locationInRow] <= '9'))
+            while (buff[locationInRow] != '\t')
             {
 
                 priority *= 10;
@@ -179,8 +179,22 @@ ProcessStaticInfo *readInputFile(int *numberOfProcesses)
 
                 ++locationInRow;
             }
+            ++locationInRow;
 
             processes[processNumber].priority = priority;
+
+            // finally get the memory size
+            int memSize = 0;
+            while ((buff[locationInRow] >= '0') && (buff[locationInRow] <= '9'))
+            {
+
+                memSize *= 10;
+                memSize += buff[locationInRow] - '0';
+
+                ++locationInRow;
+            }
+
+            processes[processNumber].memSize = memSize;
 
             // increment for next loop to access correct array position
             ++processNumber;
@@ -190,8 +204,12 @@ ProcessStaticInfo *readInputFile(int *numberOfProcesses)
     fclose(inputFile);
 
     // set id and arrival time of dummy process to -1
+    // and everything else to 0
     processes[(*numberOfProcesses) - 1].id = -1;
     processes[(*numberOfProcesses) - 1].arrivalTime = -1;
+    processes[(*numberOfProcesses) - 1].runTime = 0;
+    processes[(*numberOfProcesses) - 1].priority = 0;
+    processes[(*numberOfProcesses) - 1].memSize = 0;
 
     return processes;
 }
