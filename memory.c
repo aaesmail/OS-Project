@@ -250,14 +250,17 @@ void deAllocate_memory(MemoryBlock* block, int processId, int time) {
 
 /*
  * Allocates memory block for a process
- * (Doesn't allocate for processes of size 0 or bigger than memory size)
+ * (Doesn't allocate for processes of sizes negative or bigger than memory size)
  * 
  * true: if allocation was success
  * false: if allocation was a failure
 */
 bool allocate(int time, int processId, int size) {
-    if (size < 1) {
+    if (size < 0) {
         return false;
+    }
+    if (size == 0) {
+        return true;
     }
     return allocate_memory(head, size, processId, time);
 }
