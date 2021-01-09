@@ -13,7 +13,8 @@ void initMemory();
 /*
  * This function allocates memory for a cerain process
  * Allows for several allocations by same process
- * Doesn't allow for allocations of sizes 0 or bigger than memory size
+ * Doesn't allow for allocations of sizes negative or bigger than memory size
+ * If size is zero then just returns true without allocation
  * 
  * params:
  *      time: current time to be used for logging
