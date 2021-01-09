@@ -132,9 +132,8 @@ bool allocate_memory(MemoryBlock* block, int size, int processId, int time) {
     if (block->status == ALLOCATED) {
         return false;
     }
-    
     // if block has children then try to allocate in the children
-    if (block->status == HAS_CHILDREN) {
+    else if (block->status == HAS_CHILDREN) {
 
         // try left child first
         if (allocate_memory(block->left, size, processId, time)) {
@@ -144,9 +143,8 @@ bool allocate_memory(MemoryBlock* block, int size, int processId, int time) {
         // if left child failed then try right child
         return allocate_memory(block->right, size, processId, time);
     }
-    
     // if block is free then allocation will succeed
-    if (block->status == FREE) {
+    else if (block->status == FREE) {
 
         // get child size
         int size_of_child = block->size / 2;
@@ -211,9 +209,8 @@ void deAllocate_memory(MemoryBlock* block, int processId, int time) {
     if (block->status == FREE) {
         return;
     }
-    
     // if the block is allocated then check if it is the process
-    if (block->status == ALLOCATED) {
+    else if (block->status == ALLOCATED) {
 
         // if it is not the process then return
         if (block->processId != processId) {
@@ -228,9 +225,8 @@ void deAllocate_memory(MemoryBlock* block, int processId, int time) {
 
         return;
     }
-    
     // if the block has children then check them
-    if (block->status == HAS_CHILDREN) {
+    else if (block->status == HAS_CHILDREN) {
         
         // try to remove the process from the children
         deAllocate_memory(block->left, processId, time);

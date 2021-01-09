@@ -1,17 +1,20 @@
 #include "headers.h"
 #include <time.h>
+#include "memory.h"
 
 int createProcess(int runTime);
 void hpf_scheduler(struct Logger *logs, int *cpu_utilization);
 void rr_scheduler(struct Logger *logs, int *cpu_utilization, int quantum);
 void srtn_scheduler(struct Logger *logs, int *cpu_utilization);
 void processDoneHandler(int sig);
+void cleanResources(int sigNum);
 
 bool processDone = false;
 
 int main(int argc, char *argv[])
 {
     signal(SIGUSR1, processDoneHandler);
+    signal(SIGINT, cleanResources);
 
     initClk();
     initMemory();
@@ -49,12 +52,8 @@ int main(int argc, char *argv[])
     printLogger(&logs, cpu_utilization);
     emptyLogger(&logs);
 
-    //upon termination release the clock resources.
-    destroyClk(false);
-    destroyMemory();
-
-    // notify process generator that it terminated to clear resources
-    kill(getppid(), SIGINT);
+    // clean resources
+    cleanResources(3);
 
     //Exit
     return 0;
@@ -67,6 +66,23 @@ int main(int argc, char *argv[])
 void processDoneHandler(int sig)
 {
     processDone = true;
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+void cleanResources(int sigNum) {
+    //upon termination release the clock resources.
+    destroyClk(false);
+    destroyMemory();
+
+    // notify process generator that it terminated to clear resources
+    kill(getppid(), SIGINT);
+
+    // Exit
+    exit(0);
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
