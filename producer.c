@@ -191,9 +191,9 @@ int main() {
         // get number of item to produce
         int loc = get_semaphore(production_loc, semun);
         // put item in buffer
-        shmaddr[loc % BUFF_SIZE] = loc + 1;
+        shmaddr[loc % BUFF_SIZE] = loc;
         // print about producer item
-        printf("Produced item: %d\tat loc: %d\n", loc + 1, loc % BUFF_SIZE);
+        printf("Produced item: %d\tat loc: %d\n", loc, loc % BUFF_SIZE);
 
         // if full slots was 0 then tell consumer that i inserted an item
         if (get_semaphore(full_slots, semun) == 0) {
