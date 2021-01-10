@@ -18,6 +18,7 @@
 #define CONSUMPTION_LOC_ID 28
 #define PROTECT_MEM_ID 29
 #define FULL_SLOTS_ID 30
+#define PROCESSES_NUM_ID 31
 
 #define BUFF_SIZE 20
 
@@ -100,22 +101,34 @@ int create_semaphore(int ID, int init_val) {
 
 
 // put these variables here to use them in cleaning resources
-int msgq_id, shmid, production_loc, consumption_loc, protect_mem, full_slots;
+int msgq_id, shmid, production_loc, consumption_loc, protect_mem, full_slots, processes_num;
+int* shmaddr;
 union Semun semun;
-
 
 // clean resources after getting killed
 void cleanResources(int sigNum) {
 
-    // remove message queue
-    msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0);
-    // remove shared memory
-    shmctl(shmid, IPC_RMID, (struct shmid_ds *)0);
-    // remove semaphores
-    semctl(production_loc, 0, IPC_RMID, semun);
-    semctl(consumption_loc, 0, IPC_RMID, semun);
-    semctl(protect_mem, 0, IPC_RMID, semun);
-    semctl(full_slots, 0, IPC_RMID, semun);
+    // tell all resources that i am exiting
+    down(processes_num);
+
+    if (get_semaphore(processes_num, semun) == 0) {
+        // i am the last process
+        // so clear resources
+        // remove message queue
+        msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0);
+        // remove shared memory
+        shmctl(shmid, IPC_RMID, (struct shmid_ds *)0);
+        // remove semaphores
+        semctl(production_loc, 0, IPC_RMID, semun);
+        semctl(consumption_loc, 0, IPC_RMID, semun);
+        semctl(protect_mem, 0, IPC_RMID, semun);
+        semctl(full_slots, 0, IPC_RMID, semun);
+        semctl(processes_num, 0, IPC_RMID, semun);
+    }
+    else {
+        // there are still processes left so just detach from memory
+        shmdt(shmaddr);
+    }
 
     // exit
     exit(0);
@@ -123,8 +136,14 @@ void cleanResources(int sigNum) {
 
 int main() {
 
+    // increment processes number
+    processes_num = create_semaphore(PROCESSES_NUM_ID, 0);
+    up(processes_num);
+
+
     // put sig int callback to clean resources in it
     signal(SIGINT, cleanResources);
+
 
     // variables to use
     struct msgbuff message;
@@ -184,6 +203,7 @@ int main() {
         up(protect_mem);
     }
 
+    cleanResources(3);
 
     return 0;
 }
