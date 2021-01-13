@@ -59,12 +59,14 @@ int main(int argc, char *argv[])
             ++processToSend;
         }
     }
+
     printf("PROCESS_GENERATOR:: finished passing processes\n");
+
     // sleep waiting for a signal to terminate
-    // sigset_t emptySet;
-    // sigemptyset(&emptySet);
-    // sigsuspend(&emptySet);
-    while(1);
+    sigset_t emptySet;
+    sigemptyset(&emptySet);
+    sigsuspend(&emptySet);
+
     return 0;
 }
 
