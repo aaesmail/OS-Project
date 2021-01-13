@@ -13,11 +13,11 @@
 
 // ID of all IPC to use
 #define SHARED_MEMORY_ID 25
-#define MESSAGE_ID 26
-#define PRODUCTION_LOC_ID 27
-#define CONSUMPTION_LOC_ID 28
-#define PROTECT_MEM_ID 29
-#define FULL_SLOTS_ID 30
+#define PRODUCTION_LOC_ID 26
+#define CONSUMPTION_LOC_ID 27
+#define PROTECT_MEM_ID 28
+#define FULL_SLOTS_ID 29
+#define FREE_SLOTS_ID 30
 #define PROCESSES_NUM_ID 31
 
 #define BUFF_SIZE 20
@@ -101,7 +101,7 @@ int create_semaphore(int ID, int init_val) {
 
 
 // put these variables here to use them in cleaning resources
-int msgq_id, shmid, production_loc, consumption_loc, protect_mem, full_slots, processes_num;
+int shmid, production_loc, consumption_loc, protect_mem, full_slots, free_slots, processes_num;
 int* shmaddr;
 union Semun semun;
 
@@ -115,8 +115,6 @@ void cleanResources(int sigNum) {
     if (get_semaphore(processes_num, semun) == 0) {
         // i am the last process
         // so clear resources
-        // remove message queue
-        msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0);
         // remove shared memory
         shmctl(shmid, IPC_RMID, (struct shmid_ds *)0);
         // remove semaphores
@@ -124,6 +122,7 @@ void cleanResources(int sigNum) {
         semctl(consumption_loc, 0, IPC_RMID, semun);
         semctl(protect_mem, 0, IPC_RMID, semun);
         semctl(full_slots, 0, IPC_RMID, semun);
+        semctl(free_slots, 0, IPC_RMID, semun);
         semctl(processes_num, 0, IPC_RMID, semun);
     }
     else {
@@ -145,15 +144,6 @@ int main() {
 
     // put sig int callback to clean resources in it
     signal(SIGINT, cleanResources);
-
-
-    // variables to use
-    struct msgbuff message;
-    message.mtype = 7;
-
-
-    // id of message queue to send and receive messages
-    msgq_id = msgget(MESSAGE_ID, 0666 | IPC_CREAT);
 
     
     // id of shared memory segment
@@ -177,17 +167,17 @@ int main() {
     full_slots = create_semaphore(FULL_SLOTS_ID, 0);
 
 
+    // id of semaphore that tell how many items are free in buffer
+    free_slots = create_semaphore(FREE_SLOTS_ID, BUFF_SIZE);
+
+
     // producer produces above the buffer size by 30
     for (int i = 0; i < BUFF_SIZE + 30; ++i) {
         // if the number of slots is buffer size
         // then wait until the consumer consumes something
-        if (get_semaphore(full_slots, semun) == BUFF_SIZE) {
-            while (msgrcv(msgq_id, &message, sizeof(message.mtext), 8, !IPC_NOWAIT) == -1);
-        }
-
+        down(free_slots);
         // enter critical section
         down(protect_mem);
-
         // get number of item to produce
         int loc = get_semaphore(production_loc, semun);
         // put item in buffer
@@ -196,11 +186,6 @@ int main() {
         printf("Produced item: %d\tat loc: %d\n", loc, loc % BUFF_SIZE);
 
         // if full slots was 0 then tell consumer that i inserted an item
-        if (get_semaphore(full_slots, semun) == 0) {
-            message.mtype = 7;
-            msgsnd(msgq_id, &message, sizeof(message.mtext), !IPC_NOWAIT);
-        }
-
         up(full_slots);
         up(production_loc);
         up(protect_mem);
