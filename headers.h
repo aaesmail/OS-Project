@@ -86,8 +86,8 @@ int getProcessDownQueue(int callingProcess)
     msgq_id = msgget(key_id, 0666 | IPC_CREAT);
 
     char p1[] = "PG";
-    if(callingProcess == 1)
-        printf("%s::MsgQ Created with id: %d\n", p1 , msgq_id);
+    if (callingProcess == 1)
+        printf("%s::MsgQ Created with id: %d\n", p1, msgq_id);
 
     return msgq_id;
 }

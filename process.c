@@ -1,30 +1,27 @@
 #include "headers.h"
 
+/* Modify this file as needed*/
+// int remainingtime = 1;
+
 int main(int agrc, char *argv[])
 {
-    initClk();
-
-    //TODO it needs to get the remaining time from somewhere
     int remainingtime = atoi(argv[1]);
 
-    // get time
-    int old_time = getClk();
-    int time;
-    printf("PROCESS:: %d started\n", getpid());
+    initClk();
+    int key_id = ftok("keyfile", 65);
+    int q_id = msgget(key_id, 0666 | IPC_CREAT);
+
+    struct msgBuff message;
+    message.mtype = getpid() % 100000;
+
     while (remainingtime > 0)
     {
-        time = getClk();
-
-        if (old_time != time)
-        {
-            old_time = time;
-            --remainingtime;
-            printf("PROCESS:: %d has remaining time %d\n", getpid(), remainingtime);
-        }
+        msgrcv(q_id, &message, sizeof(message.mint), message.mtype, !IPC_NOWAIT);
+        remainingtime = message.mint;
     }
 
     destroyClk(false);
-    printf("PROCESS:: %d finished \n", getppid());
+    printf("PROCESS:: %d finished \n", getpid());
 
     // TODO here it should notify the scheduler
     kill(getppid(), SIGUSR1);
