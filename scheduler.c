@@ -2,9 +2,9 @@
 #include <time.h>
 
 int createProcess(int runTime);
-void hpf_scheduler(struct Logger *logs, int *cpu_utilization);
-void rr_scheduler(struct Logger *logs, int *cpu_utilization, int quantum);
-void srtn_scheduler(struct Logger *logs, int *cpu_utilization);
+void hpf_scheduler(struct Logger *logs, int *cpu_utilization, int remainingTimeQId);
+void rr_scheduler(struct Logger *logs, int *cpu_utilization, int quantum, int remainingTimeQId);
+void srtn_scheduler(struct Logger *logs, int *cpu_utilization, int remainingTimeQId);
 void processDoneHandler(int sig);
 
 bool processDone = false;
@@ -15,7 +15,8 @@ int main(int argc, char *argv[])
 
     initClk();
 
-    //TODO implement the scheduler :)
+    int key_id = ftok("keyfile", 65);
+    int remainingTimeQId = msgget(key_id, 0666 | IPC_CREAT);
 
     time_t start, end;
     // seconds = time(NULL);
@@ -31,13 +32,13 @@ int main(int argc, char *argv[])
     switch (schedulingAlgorithm)
     {
     case HPF:
-        hpf_scheduler(&logs, &cpu_utilization);
+        hpf_scheduler(&logs, &cpu_utilization, remainingTimeQId);
         break;
     case SRTN:
-        srtn_scheduler(&logs, &cpu_utilization);
+        srtn_scheduler(&logs, &cpu_utilization, remainingTimeQId);
         break;
     case RR:
-        rr_scheduler(&logs, &cpu_utilization, atoi(argv[2]));
+        rr_scheduler(&logs, &cpu_utilization, atoi(argv[2]), remainingTimeQId);
         break;
     default:
         printf("SCHEDULER:: WRONG PARAMETER FOR THE SCHEDULING ALGORITHM ERRRRRRRRRRRRRRRRRR\n");
@@ -97,7 +98,7 @@ int createProcess(int runTime)
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-void hpf_scheduler(struct Logger *logs, int *cpu_utilization)
+void hpf_scheduler(struct Logger *logs, int *cpu_utilization, int remainingTimeQId)
 {
     int processesQId = getProcessDownQueue(2);
     unsigned long sizeOfMessage = sizeof(ProcessStaticInfo) - sizeof(long);
@@ -116,6 +117,9 @@ void hpf_scheduler(struct Logger *logs, int *cpu_utilization)
     int quantumStartTime = 0;
     int quantumFinishTime = 0;
     int schedulerWastedTime = 0;
+
+    struct msgBuff message;
+    message.mtype = 0;
 
     while (!readingDone || !isEmpty(&priorityQHead))
     {
@@ -168,12 +172,24 @@ void hpf_scheduler(struct Logger *logs, int *cpu_utilization)
 
         printf("SCHEDULER:: started process %d\n", currentRunningProcess.pid);
 
-        // while( (getClk() - startTime) > currentRunningProcess.runTime )
-        while (!processDone)
-            ;
+        int oldTime = getClk();
+        int time = getClk();
+        message.mtype = currentRunningProcess.pid % 100000;
 
-        quantumFinishTime = getClk();
-        currentRunningProcess.remainingTime -= quantumFinishTime - quantumStartTime; //@ HPF always = 0
+        while (!processDone)
+        {
+            time = getClk();
+            if (oldTime < time)
+            {
+                (currentRunningProcess.remainingTime) -= (time - oldTime);
+                oldTime = time;
+                message.mint = currentRunningProcess.remainingTime;
+                msgsnd(remainingTimeQId, &message, sizeof(message.mint), !IPC_NOWAIT);
+            }
+        }
+
+        quantumFinishTime = time;
+
         newLog = createLog(
             quantumFinishTime,
             currentRunningProcess.id,
@@ -197,7 +213,7 @@ void hpf_scheduler(struct Logger *logs, int *cpu_utilization)
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-void rr_scheduler(struct Logger *logs, int *cpu_utilization, int quantum)
+void rr_scheduler(struct Logger *logs, int *cpu_utilization, int quantum, int remainingTimeQId)
 {
     // get the id of message queue that has processes
     int processesQId = getProcessDownQueue(2);
@@ -227,6 +243,9 @@ void rr_scheduler(struct Logger *logs, int *cpu_utilization, int quantum)
     int quantumStartTime = 0;
     int quantumFinishTime = schedulerStartTime;
     int logState;
+
+    struct msgBuff message;
+    message.mtype = 0;
 
     while (true)
     {
@@ -296,12 +315,24 @@ void rr_scheduler(struct Logger *logs, int *cpu_utilization, int quantum)
 
         printf("SCHEDULER:: resumed process %d\n", lastRunningProcess->pid);
 
-        while ((quantum > getClk() - quantumStartTime) && !processDone)
-            ;
+        int oldTime = getClk();
+        int time = getClk();
+        message.mtype = lastRunningProcess->pid % 100000;
+
+        while ((quantum > time - quantumStartTime) && !processDone)
+        {
+            time = getClk();
+            if (oldTime < time)
+            {
+                (lastRunningProcess->remainingTime) -= (time - oldTime);
+                oldTime = time;
+                message.mint = lastRunningProcess->remainingTime;
+                msgsnd(remainingTimeQId, &message, sizeof(message.mint), !IPC_NOWAIT);
+            }
+        }
+
         kill(lastRunningProcess->pid, SIGSTOP);
         quantumFinishTime = getClk();
-
-        lastRunningProcess->remainingTime -= quantumFinishTime - quantumStartTime;
 
         printf("SCHEDULER:: stopped process %d\n", lastRunningProcess->pid);
 
@@ -309,13 +340,6 @@ void rr_scheduler(struct Logger *logs, int *cpu_utilization, int quantum)
 
         if (processDone)
         {
-
-            while (lastRunningProcess->remainingTime > 0)
-                if (quantumFinishTime != getClk())
-                {
-                    quantumFinishTime = getClk();
-                    lastRunningProcess->remainingTime -= 1;
-                }
 
             printf("SCHEDULER:: finished process %d\n", lastRunningProcess->pid);
             processDone = false;
@@ -361,7 +385,7 @@ void rr_scheduler(struct Logger *logs, int *cpu_utilization, int quantum)
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-void srtn_scheduler(struct Logger *logs, int *cpu_utilization)
+void srtn_scheduler(struct Logger *logs, int *cpu_utilization, int remainingTimeQId)
 {
     int processesQId = getProcessDownQueue(2);
     unsigned long sizeOfMessage = sizeof(ProcessStaticInfo);
@@ -387,8 +411,25 @@ void srtn_scheduler(struct Logger *logs, int *cpu_utilization)
 
     Pcb currentRunningProcess;
 
+    struct msgBuff message;
+    message.mtype = 0;
+
+    int time = getClk(), oldTime = getClk();
+
     while (true)
     {
+        time = getClk();
+        if (time > oldTime)
+        {
+            if (currentlyRunning != -1)
+            {
+                currentRunningProcess.remainingTime -= time - oldTime;
+                message.mtype = currentRunningProcess.pid % 100000;
+                message.mint = currentRunningProcess.remainingTime;
+                msgsnd(remainingTimeQId, &message, sizeof(message.mint), !IPC_NOWAIT);
+            }
+            oldTime = time;
+        }
         // checking if there are any new messages from the process generetor.
         while (!readingDone && msgrcv(processesQId, process, sizeOfMessage, 0, IPC_NOWAIT) != -1)
         {
@@ -408,7 +449,7 @@ void srtn_scheduler(struct Logger *logs, int *cpu_utilization)
                 {
                     kill(currentlyRunning, SIGSTOP);
                     quantumFinishTime = getClk();
-                    currentRunningProcess.remainingTime -= getClk() - quantumStartTime;
+                    //currentRunningProcess.remainingTime -= getClk() - quantumStartTime;
                     if (currentRunningProcess.remainingTime <= process->runTime)
                     {
                         //Insert new process into queue
@@ -505,7 +546,7 @@ void srtn_scheduler(struct Logger *logs, int *cpu_utilization)
             currentlyRunning = -1;
             processDone = false;
             quantumFinishTime = getClk();
-            currentRunningProcess.remainingTime -= quantumFinishTime - quantumStartTime;
+            //currentRunningProcess.remainingTime -= quantumFinishTime - quantumStartTime;
             newLog = createLog(
                 quantumFinishTime,
                 currentRunningProcess.id,

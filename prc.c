@@ -1,5 +1,11 @@
 #include "headers.h"
 
+struct msgBuff
+{
+    long mtype;
+    int mint;
+};
+
 /* Modify this file as needed*/
 // int remainingtime = 1;
 
@@ -21,9 +27,6 @@ int main(int agrc, char *argv[])
     }
 
     destroyClk(false);
-    printf("PROCESS:: %d finished \n", getpid());
 
-    // TODO here it should notify the scheduler
-    kill(getppid(), SIGUSR1);
     return 0;
 }
