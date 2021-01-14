@@ -41,6 +41,7 @@ int main(int argc, char *argv[])
         rr_scheduler(&logs, &cpu_utilization, atoi(argv[2]), remainingTimeQId);
         break;
     default:
+        // This will never happen, But god knows :)
         printf("SCHEDULER:: WRONG PARAMETER FOR THE SCHEDULING ALGORITHM ERRRRRRRRRRRRRRRRRR\n");
         break;
     }
@@ -135,7 +136,7 @@ void hpf_scheduler(struct Logger *logs, int *cpu_utilization, int remainingTimeQ
             // When the process generator sends a msg other than -1 indicating that a new process has arrived to the system.
             else
             {
-                // Insert new Pcb: id=pid, arrivalTime=given arr time, runTime=given run time, remainingTime= given run time, priority=given priority, stoppedTime=0(not used in HPF), state=WAITING
+                // Insert new Pcb: id=given id(from text file), pid=-1(not created yet), arrivalTime=given arr time, runTime=given run time, remainingTime= given run time, priority=given priority, stoppedTime=0(not used in HPF), state=WAITING
                 Pcb *newPcb = createPcb(process->id, -1, process->arrivalTime, process->runTime, process->runTime, 0, process->priority, 0, WAITING);
                 enqueue(&priorityQHead, newPcb);
             }
@@ -155,7 +156,7 @@ void hpf_scheduler(struct Logger *logs, int *cpu_utilization, int remainingTimeQ
             kill(currentRunningProcess.pid, SIGCONT);
 
         if (quantumFinishTime != 0)
-            schedulerWastedTime += quantumStartTime - quantumFinishTime;
+            schedulerWastedTime += quantumStartTime - quantumFinishTime; //The current time - the finish time from the last iteration [i.e: the time of a whole iteration excluding the running time of the process]
         currentRunningProcess.state = RUNNING;
         currentRunningProcess.waitingTime += quantumStartTime - currentRunningProcess.arrivalTime; //@ HPF always = quantumStartTime - currentRunningProcess.arrivalTime [The += is the same as =]
 
