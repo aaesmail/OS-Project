@@ -157,7 +157,7 @@ bool allocate_memory(MemoryBlock* block, int size, int processId, int time) {
             block->processId = processId;
             block->processSize = size;
 
-            logMemoryAllocation(time, size, processId, block->start, block->start + size - 1);
+            logMemoryAllocation(time, size, processId, block->start, block->end);
             return true;
         }
         else {
@@ -221,7 +221,7 @@ void deAllocate_memory(MemoryBlock* block, int processId, int time) {
         block->status = FREE;
         block->processId = -5;
 
-        logMemoryDeAllocation(time, block->processSize, processId, block->start, block->start + block->processSize - 1);
+        logMemoryDeAllocation(time, block->processSize, processId, block->start, block->end);
 
         return;
     }
