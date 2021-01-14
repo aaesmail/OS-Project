@@ -38,8 +38,9 @@ typedef struct Pcb
     int remainingTime;
     int waitingTime;
     int arrivalTime;
-    int stoppedTime;
     int priority; //Lower value ---> higher priority
+    int size;
+    int stoppedTime;
     enum process_state state;
     struct Pcb *next;
 } Pcb;
@@ -131,7 +132,7 @@ Pcb *circularQueue_dequeue(circularQueue *q)
 
 //PRIORITY QUEUE FOR PROCESSES TABLE
 //-----------------------------------
-Pcb *createPcb(int id, int pid, int arrivalTime, int runTime, int remainingTime, int waitingTime, int priority, int stoppedTime, enum process_state state)
+Pcb *createPcb(int id, int pid, int arrivalTime, int runTime, int remainingTime, int waitingTime, int priority, int size, int stoppedTime, enum process_state state)
 {
 
     Pcb *newPcb = (Pcb *)malloc(sizeof(Pcb));
@@ -142,6 +143,7 @@ Pcb *createPcb(int id, int pid, int arrivalTime, int runTime, int remainingTime,
     newPcb->remainingTime = remainingTime;
     newPcb->waitingTime = waitingTime;
     newPcb->priority = priority;
+    newPcb->size = size;
     newPcb->stoppedTime = stoppedTime;
     newPcb->state = state;
     newPcb->next = NULL;
