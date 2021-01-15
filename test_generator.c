@@ -31,7 +31,7 @@ int main(int argc, char * argv[])
         pData.arrivaltime += rand() % (11); //processes arrives in order
         pData.runningtime = rand() % (30);
         pData.priority = rand() % (11);
-        fprintf(pFile, "%d\t%d\t%d\t%d\n", pData.id, pData.arrivaltime, pData.runningtime, pData.priority);
+        fprintf(pFile, "%d\t%d\t%d\t%d\t\n", pData.id, pData.arrivaltime, pData.runningtime, pData.priority);
     }
     fclose(pFile);
 }

@@ -37,8 +37,9 @@ typedef struct Pcb
     int remainingTime;
     int waitingTime;
     int arrivalTime;
-    int stoppedTime;
     int priority; //Lower value ---> higher priority
+    int size;
+    int stoppedTime;
     enum process_state state;
     struct Pcb *next;
 } Pcb;
@@ -286,7 +287,9 @@ double getStdWTA(struct Logger *logger, double avgWTA)
         if (currentLog->state == FINISHED)
         {
             i_ta = currentLog->waitingTime + currentLog->runTime;
-            f_wta = (double)i_ta / currentLog->runTime;
+            if(currentLog->runTime > 0)
+                f_wta = (double)i_ta / currentLog->runTime;
+            else f_wta = 0;
             stdWTA += (avgWTA - f_wta) * (avgWTA - f_wta);
             n++;
         }
@@ -319,7 +322,7 @@ void removeTrailingZeros(char *str)
         *c = '\0';
 }
 
-void printLogger(struct Logger *logger, int cpu_utilization)
+void printLogger(struct Logger *logger, double cpu_utilization)
 {
 
     char s1[] = "started";
@@ -361,7 +364,9 @@ void printLogger(struct Logger *logger, int cpu_utilization)
         case FINISHED:
             state = s4;
             i_ta = currentLog->waitingTime + currentLog->runTime;
-            f_wta = (double)i_ta / currentLog->runTime;
+            if(currentLog->runTime > 0)
+                f_wta = (double)i_ta / currentLog->runTime;
+            else f_wta = 0;
             sprintf(TA_and_WTA, " TA %d WTA = %f", i_ta, roundf(f_wta * 100) / 100);
             removeTrailingZeros(TA_and_WTA);
             avgWTA += f_wta;
@@ -398,14 +403,20 @@ void printLogger(struct Logger *logger, int cpu_utilization)
 
     stdWTA = getStdWTA(logger, avgWTA);
 
-    fprintf(perf_file, "CPU utilization = %d%%\n", cpu_utilization);
+    sprintf(out, "%.2f", cpu_utilization);
+    removeTrailingZeros(out);
+
+    fprintf(perf_file, "CPU utilization = %s%%\n", out);
 
     sprintf(out, "%.2f", avgWTA);
     removeTrailingZeros(out);
 
     fprintf(perf_file, "Avg WTA = %s\n", out);
 
-    fprintf(perf_file, "Avg Waiting = %.2f\n", avgWaiting);
+    sprintf(out, "%.2f", avgWaiting);
+    removeTrailingZeros(out);
+
+    fprintf(perf_file, "Avg Waiting = %s\n", out);
 
     sprintf(out, "%.2f", stdWTA);
     removeTrailingZeros(out);

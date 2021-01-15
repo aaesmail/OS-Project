@@ -4,7 +4,6 @@ void clearResources(int);
 ProcessStaticInfo *readInputFile();
 int getSchedulingAlgorithm(int *quantum);
 void createClockAndScheduler(int schedulingAlgorithm, int quantum);
-
 // global variables to clean in INT handler
 int processDownQueueId;
 ProcessStaticInfo *processes;
@@ -16,7 +15,6 @@ int main(int argc, char *argv[])
     // 1. Read the input file.
     int processesNumber;
     processes = readInputFile(&processesNumber);
-
     // 2. Ask the user for the chosen scheduling algorithm and its parameters, if there are any.
     int quantum = 0;
     int schedulingAlgorithm = getSchedulingAlgorithm(&quantum);
@@ -171,9 +169,9 @@ ProcessStaticInfo *readInputFile(int *numberOfProcesses)
 
             processes[processNumber].runTime = runTime;
 
-            // finally get the priority
+            // next get the priority
             int priority = 0;
-            while ((buff[locationInRow] >= '0') && (buff[locationInRow] <= '9'))
+            while (buff[locationInRow] != '\t')
             {
 
                 priority *= 10;
@@ -181,8 +179,10 @@ ProcessStaticInfo *readInputFile(int *numberOfProcesses)
 
                 ++locationInRow;
             }
+            ++locationInRow;
 
             processes[processNumber].priority = priority;
+
 
             // increment for next loop to access correct array position
             ++processNumber;
@@ -192,8 +192,11 @@ ProcessStaticInfo *readInputFile(int *numberOfProcesses)
     fclose(inputFile);
 
     // set id and arrival time of dummy process to -1
+    // and everything else to 0
     processes[(*numberOfProcesses) - 1].id = -1;
     processes[(*numberOfProcesses) - 1].arrivalTime = -1;
+    processes[(*numberOfProcesses) - 1].runTime = 0;
+    processes[(*numberOfProcesses) - 1].priority = 0;
 
     return processes;
 }

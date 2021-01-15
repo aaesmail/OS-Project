@@ -13,11 +13,12 @@ int main(int agrc, char *argv[])
 
     struct msgBuff message;
     message.mtype = getpid() % 100000;
-
+    printf("Process:: started with remaining time %d\n", remainingtime);
     while (remainingtime > 0)
     {
         msgrcv(q_id, &message, sizeof(message.mint), message.mtype, !IPC_NOWAIT);
         remainingtime = message.mint;
+        printf("Process:: remaining time %d\n", remainingtime);
     }
 
     destroyClk(false);

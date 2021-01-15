@@ -2,30 +2,34 @@
 #include <time.h>
 
 int createProcess(int runTime);
-void hpf_scheduler(struct Logger *logs, int *cpu_utilization, int remainingTimeQId);
-void rr_scheduler(struct Logger *logs, int *cpu_utilization, int quantum, int remainingTimeQId);
-void srtn_scheduler(struct Logger *logs, int *cpu_utilization, int remainingTimeQId);
+void hpf_scheduler(struct Logger *logs, double *cpu_utilization, int remainingTimeQId);
+void rr_scheduler(struct Logger *logs, double *cpu_utilization, int quantum, int remainingTimeQId);
+void srtn_scheduler(struct Logger *logs, double *cpu_utilization, int remainingTimeQId);
 void processDoneHandler(int sig);
+void cleanResources(int sigNum);
 
 bool processDone = false;
+int remainingTimeQId;
 
 int main(int argc, char *argv[])
 {
     signal(SIGUSR1, processDoneHandler);
+    signal(SIGINT, cleanResources);
+
+    printf("SCHEDULER:: init\n");
 
     initClk();
 
     int key_id = ftok("keyfile", 65);
-    int remainingTimeQId = msgget(key_id, 0666 | IPC_CREAT);
+    remainingTimeQId = msgget(key_id, 0666 | IPC_CREAT);
+    
+    printf("SCHEDULER::MsgQ (for remaining time) Created with id: %d\n", remainingTimeQId);
 
-    time_t start, end;
-    // seconds = time(NULL);
-
-    printf("SCHEDULER:: init\n");
 
     struct Logger logs;
+
     loggerInit(&logs);
-    int cpu_utilization;
+    double cpu_utilization;
 
     // read which algorithm to run
     int schedulingAlgorithm = atoi(argv[1]);
@@ -50,11 +54,8 @@ int main(int argc, char *argv[])
     printLogger(&logs, cpu_utilization);
     emptyLogger(&logs);
 
-    //upon termination release the clock resources.
-    destroyClk(false);
-
-    // notify process generator that it terminated to clear resources
-    kill(getppid(), SIGINT);
+    // clean resources
+    cleanResources(3);
 
     //Exit
     return 0;
@@ -67,6 +68,24 @@ int main(int argc, char *argv[])
 void processDoneHandler(int sig)
 {
     processDone = true;
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+void cleanResources(int sigNum) {
+    //upon termination release the clock resources.
+    destroyClk(false);
+
+    // notify process generator that it terminated to clear resources
+    kill(getppid(), SIGINT);
+
+    // delete remaianing time msg queue
+    msgctl(remainingTimeQId, IPC_RMID, (struct msqid_ds *)0);
+    // Exit
+    exit(0);
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -90,7 +109,7 @@ int createProcess(int runTime)
         printf("SCHEDULER:: after execv ERRRRRRRRRRRRRRRRRRRRRRR!!!!!\n");
     }
     // kill(pid, SIGSTOP);
-    printf("SCHEDULER:: process %d arrived\n", pid);
+    printf("SCHEDULER:: process %d launched\n", pid);
     // printf("\n\n    pid: %d, runTime: %s, id: %d\n\n", pid, runTime, p->id);
     return pid;
 }
@@ -99,7 +118,7 @@ int createProcess(int runTime)
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-void hpf_scheduler(struct Logger *logs, int *cpu_utilization, int remainingTimeQId)
+void hpf_scheduler(struct Logger *logs, double *cpu_utilization, int remainingTimeQId)
 {
     int processesQId = getProcessDownQueue(2);
     unsigned long sizeOfMessage = sizeof(ProcessStaticInfo) - sizeof(long);
@@ -107,16 +126,18 @@ void hpf_scheduler(struct Logger *logs, int *cpu_utilization, int remainingTimeQ
 
     // Create empty priority queue
     Pcb *priorityQHead = NULL;
+    Pcb *tempPriorityQHead = NULL;
+
     Log *newLog;
 
     bool readingDone = false;
 
-    int schedulerStartTime = getClk();
+    int schedulerStartTime = 0;
     int schedulerFinishTime;
     int schedulerTotalTime;
 
     int quantumStartTime = 0;
-    int quantumFinishTime = 0;
+    int quantumFinishTime = schedulerStartTime;
     int schedulerWastedTime = 0;
 
     struct msgBuff message;
@@ -148,15 +169,20 @@ void hpf_scheduler(struct Logger *logs, int *cpu_utilization, int remainingTimeQ
         if (!dequeue(&priorityQHead, &currentRunningProcess))
             continue;
 
+
         quantumStartTime = getClk();
 
+
+        //Start the scheduled process
         if (currentRunningProcess.pid == -1)
+        {
             currentRunningProcess.pid = createProcess(currentRunningProcess.runTime);
+        }
         else
             kill(currentRunningProcess.pid, SIGCONT);
+        
 
-        if (quantumFinishTime != 0)
-            schedulerWastedTime += quantumStartTime - quantumFinishTime; //The current time - the finish time from the last iteration [i.e: the time of a whole iteration excluding the running time of the process]
+        schedulerWastedTime += quantumStartTime - quantumFinishTime;
         currentRunningProcess.state = RUNNING;
         currentRunningProcess.waitingTime += quantumStartTime - currentRunningProcess.arrivalTime; //@ HPF always = quantumStartTime - currentRunningProcess.arrivalTime [The += is the same as =]
 
@@ -171,7 +197,7 @@ void hpf_scheduler(struct Logger *logs, int *cpu_utilization, int remainingTimeQ
 
         logger_enqueue(logs, newLog);
 
-        printf("SCHEDULER:: started process %d\n", currentRunningProcess.pid);
+        // printf("SCHEDULER:: started process %d\n", currentRunningProcess.pid);
 
         int oldTime = getClk();
         int time = getClk();
@@ -206,15 +232,16 @@ void hpf_scheduler(struct Logger *logs, int *cpu_utilization, int remainingTimeQ
     }
     schedulerFinishTime = getClk();
     schedulerTotalTime = schedulerFinishTime - schedulerStartTime;
-    printf("%d  %d\n", schedulerTotalTime, schedulerWastedTime);
     (*cpu_utilization) = ((double)(schedulerTotalTime - schedulerWastedTime) / schedulerTotalTime) * 100;
+    printf("SCHEDULER:: total time = %d  Wasted time = %d CPU util = %f\n", schedulerTotalTime, schedulerWastedTime, *cpu_utilization);
+
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-void rr_scheduler(struct Logger *logs, int *cpu_utilization, int quantum, int remainingTimeQId)
+void rr_scheduler(struct Logger *logs, double *cpu_utilization, int quantum, int remainingTimeQId)
 {
     // get the id of message queue that has processes
     int processesQId = getProcessDownQueue(2);
@@ -386,7 +413,7 @@ void rr_scheduler(struct Logger *logs, int *cpu_utilization, int quantum, int re
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-void srtn_scheduler(struct Logger *logs, int *cpu_utilization, int remainingTimeQId)
+void srtn_scheduler(struct Logger *logs, double *cpu_utilization, int remainingTimeQId)
 {
     int processesQId = getProcessDownQueue(2);
     unsigned long sizeOfMessage = sizeof(ProcessStaticInfo);
