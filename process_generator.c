@@ -4,7 +4,6 @@ void clearResources(int);
 ProcessStaticInfo *readInputFile();
 int getSchedulingAlgorithm(int *quantum);
 void createClockAndScheduler(int schedulingAlgorithm, int quantum);
-
 // global variables to clean in INT handler
 int processDownQueueId;
 ProcessStaticInfo *processes;
@@ -16,7 +15,6 @@ int main(int argc, char *argv[])
     // 1. Read the input file.
     int processesNumber;
     processes = readInputFile(&processesNumber);
-
     // 2. Ask the user for the chosen scheduling algorithm and its parameters, if there are any.
     int quantum = 0;
     int schedulingAlgorithm = getSchedulingAlgorithm(&quantum);

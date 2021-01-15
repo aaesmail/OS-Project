@@ -13,7 +13,7 @@ int shmid;
 void cleanup(int signum)
 {
     shmctl(shmid, IPC_RMID, NULL);
-    printf("Clock terminating!\n");
+    printf("CLK:: Clock terminating!\n");
     exit(0);
 }
 
@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
 
 {
 
-    printf("Clock starting\n");
+    printf("CLK:: Clock starting\n");
 
     signal(SIGINT, cleanup);
 
@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
-    printf("Clk shmid: %d\n: ", shmid);
+    printf("CLK:: Clk shmid: %d\n", shmid);
 
     int *shmaddr = (int *)shmat(shmid, (void *)0, 0);
 
@@ -59,9 +59,11 @@ int main(int argc, char *argv[])
     while (1)
     {
 
-        printf("\nCLK:: ---- tick: %d ----\n", *shmaddr);
+        printf("CLK:: ---- tick: %d ----\n", *shmaddr);
         sleep(1);
 
         (*shmaddr)++;
     }
+    
+    return 0;
 }
