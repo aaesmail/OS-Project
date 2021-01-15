@@ -430,7 +430,7 @@ void srtn_scheduler(struct Logger *logs, double *cpu_utilization, int remainingT
     int schedulerTotalTime;
 
     int quantumStartTime = 0;
-    int quantumFinishTime = 0;
+    int quantumFinishTime = schedulerStartTime;
     int schedulerWastedTime = 0;
 
     int currentlyRunning = -1;
@@ -517,8 +517,7 @@ void srtn_scheduler(struct Logger *logs, double *cpu_utilization, int remainingT
                         currentRunningProcess.arrivalTime = quantumStartTime;
                         currentRunningProcess.runTime = process->runTime;
                         currentRunningProcess.remainingTime = process->runTime;
-                        if (quantumFinishTime != 0)
-                            schedulerWastedTime += quantumStartTime - quantumFinishTime;
+                        schedulerWastedTime += quantumStartTime - quantumFinishTime;
                         currentRunningProcess.state = RUNNING;
                         currentRunningProcess.waitingTime = quantumStartTime - currentRunningProcess.arrivalTime;
 
@@ -548,8 +547,7 @@ void srtn_scheduler(struct Logger *logs, double *cpu_utilization, int remainingT
                     currentRunningProcess.remainingTime = process->runTime;
                     currentRunningProcess.priority = process->runTime;
                     currentRunningProcess.stoppedTime = -1;
-                    if (quantumFinishTime != 0)
-                        schedulerWastedTime += quantumStartTime - quantumFinishTime;
+                    schedulerWastedTime += quantumStartTime - quantumFinishTime;
                     currentRunningProcess.state = RUNNING;
                     currentRunningProcess.waitingTime = quantumStartTime - currentRunningProcess.arrivalTime;
 
