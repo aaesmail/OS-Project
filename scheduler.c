@@ -22,9 +22,8 @@ int main(int argc, char *argv[])
 
     int key_id = ftok("keyfile", 65);
     remainingTimeQId = msgget(key_id, 0666 | IPC_CREAT);
-    
-    printf("SCHEDULER::MsgQ (for remaining time) Created with id: %d\n", remainingTimeQId);
 
+    printf("SCHEDULER::MsgQ (for remaining time) Created with id: %d\n", remainingTimeQId);
 
     struct Logger logs;
 
@@ -74,8 +73,8 @@ void processDoneHandler(int sig)
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
-void cleanResources(int sigNum) {
+void cleanResources(int sigNum)
+{
     //upon termination release the clock resources.
     destroyClk(false);
 
@@ -169,9 +168,7 @@ void hpf_scheduler(struct Logger *logs, double *cpu_utilization, int remainingTi
         if (!dequeue(&priorityQHead, &currentRunningProcess))
             continue;
 
-
         quantumStartTime = getClk();
-
 
         //Start the scheduled process
         if (currentRunningProcess.pid == -1)
@@ -180,7 +177,6 @@ void hpf_scheduler(struct Logger *logs, double *cpu_utilization, int remainingTi
         }
         else
             kill(currentRunningProcess.pid, SIGCONT);
-        
 
         schedulerWastedTime += quantumStartTime - quantumFinishTime;
         currentRunningProcess.state = RUNNING;
@@ -234,7 +230,6 @@ void hpf_scheduler(struct Logger *logs, double *cpu_utilization, int remainingTi
     schedulerTotalTime = schedulerFinishTime - schedulerStartTime;
     (*cpu_utilization) = ((double)(schedulerTotalTime - schedulerWastedTime) / schedulerTotalTime) * 100;
     printf("SCHEDULER:: total time = %d  Wasted time = %d CPU util = %f\n", schedulerTotalTime, schedulerWastedTime, *cpu_utilization);
-
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -356,6 +351,9 @@ void rr_scheduler(struct Logger *logs, double *cpu_utilization, int quantum, int
                 oldTime = time;
                 message.mint = lastRunningProcess->remainingTime;
                 msgsnd(remainingTimeQId, &message, sizeof(message.mint), !IPC_NOWAIT);
+                if (lastRunningProcess->remainingTime == 0)
+                    while (!processDone)
+                        ;
             }
         }
 
